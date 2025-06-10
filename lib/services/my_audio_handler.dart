@@ -32,7 +32,7 @@ class MyAudioHandler extends BaseAudioHandler {
             MediaAction.skipToPrevious,
           },
           androidCompactActionIndices: const [0, 1, 2],
-          processingState: const {
+          processingState: {
             ProcessingState.idle: AudioProcessingState.idle,
             ProcessingState.loading: AudioProcessingState.loading,
             ProcessingState.buffering: AudioProcessingState.buffering,
@@ -54,6 +54,7 @@ class MyAudioHandler extends BaseAudioHandler {
       if (index != null && _player.audioSource is ConcatenatingAudioSource) {
         final source = (_player.audioSource! as ConcatenatingAudioSource).children[index];
         if (source is UriAudioSource && source.tag is MediaItem) {
+          // ✅ This sends metadata to notification
           mediaItem.add(source.tag as MediaItem);
         }
       }

@@ -1,11 +1,10 @@
 import 'package:audio_service/audio_service.dart';
-import 'package:flukely/screen/new_music_screen.dart';
+import 'package:flukely/screen/music_list_screen.dart';
 import 'package:flukely/services/my_audio_handler.dart';
 import 'package:flutter/material.dart';
-// import 'package:just_audio_background/just_audio_background.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-AudioHandler? _audioHandler; // add this top-level variable
+AudioHandler? _audioHandler; 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +19,7 @@ Future<void> main() async {
       androidNotificationChannelName: 'Audio playback',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
+      androidShowNotificationBadge: true,
     ),
   );
 
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MusicPlayerScreen(audioHandler: audioHandler),
+      home: MusicListScreen(audioHandler: audioHandler),
     );
   }
 }
