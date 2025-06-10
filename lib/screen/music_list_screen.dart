@@ -139,16 +139,29 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
     return isSplashScreen != true
       ? Scaffold(
         backgroundColor: Colors.grey[900],
-        body: Center(
-          child: RotationTransition(
-            turns: _animationController,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(100),
-              child:  Container(
-                width: 150,
-                height: 150,
-                color: Colors.grey[800],
-                child: const Icon(Icons.music_note, color: Colors.white70, size: 80,),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              Colors.deepPurpleAccent.withValues(alpha: .1),
+              Colors.purpleAccent.withValues(alpha: .1),
+            ])
+          ),
+          child: Center(
+            child: RotationTransition(
+              turns: _animationController,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child:  Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      Colors.deepPurpleAccent.withValues(alpha: .35),
+                      Colors.purpleAccent.withValues(alpha: .35),
+                    ])
+                  ),
+                  child: const Icon(Icons.music_note, color: Colors.white70, size: 80,),
+                ),
               ),
             ),
           ),
@@ -157,7 +170,7 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
       : Scaffold(
         backgroundColor: Colors.grey[900],
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.deepPurpleAccent.withValues(alpha: .1),
           elevation: 0,
           title: Text('Fukely', style: TextStyle(
             fontWeight: FontWeight.bold,
@@ -177,8 +190,21 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
             SizedBox(width: 10,)
           ],
         ),
-        body: _buildBody(),
-        bottomNavigationBar: _buildMiniPlayer(),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              Colors.deepPurpleAccent.withValues(alpha: .1),
+              Colors.purpleAccent.withValues(alpha: .1),
+            ])
+          ),
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              _buildBody(),
+              _buildMiniPlayer(),
+            ],
+          ),
+        ) 
       );
   }
 
@@ -267,14 +293,20 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
+                    borderRadius: BorderRadius.circular(8),
                     child: QueryArtworkWidget(
                       id: song.id,
                       type: ArtworkType.AUDIO,
+                      artworkBorder: BorderRadius.circular(8),
                       nullArtworkWidget: Container(
                         width: 60,
                         height: 60,
-                        color: Colors.grey[800],
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [
+                            Colors.deepPurpleAccent.withValues(alpha: .35),
+                            Colors.purpleAccent.withValues(alpha: .35),
+                          ])
+                        ),
                         child: const Icon(Icons.music_note, color: Colors.white70),
                       ),
                       artworkWidth: 60,
@@ -348,13 +380,15 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
         if (mediaItem == null) return const SizedBox();
 
         return Container(
+          margin: EdgeInsets.all(14),
           decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.grey[850]!.withValues(alpha: 0.9),
-                Colors.grey[900]!,
+                Colors.grey[900]!.withValues(alpha: 0.8),
+                Colors.grey[800]!,
               ],
             ),
             boxShadow: [
@@ -366,11 +400,26 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
             ],
           ),
           child: InkWell(
+            borderRadius: BorderRadius.circular(16),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => MusicFullScreen(audioHandler: widget.audioHandler),
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => MusicFullScreen(audioHandler: widget.audioHandler),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    const begin = Offset(0.0, 1.0); // Start from bottom
+                    const end = Offset.zero; // End at top
+                    const curve = Curves.easeInOut;
+
+                    var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                    var offsetAnimation = animation.drive(tween);
+
+                    return SlideTransition(
+                      position: offsetAnimation,
+                      child: child,
+                    );
+                  },
+                  transitionDuration: Duration(milliseconds: 300), // Adjust duration as needed
                 ),
               );
             },
@@ -379,6 +428,7 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const SizedBox(height: 8),
                   _buildProgressBar(),
                   const SizedBox(height: 8),
                   _buildSongInfo(mediaItem),
@@ -407,13 +457,18 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
               nullArtworkWidget: Container(
                 width: 50,
                 height: 50,
-                color: Colors.grey[800],
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    Colors.deepPurpleAccent.withValues(alpha: .35),
+                    Colors.purpleAccent.withValues(alpha: .35),
+                  ])
+                ),
                 child: const Icon(Icons.music_note, color: Colors.white70),
               ),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,6 +496,7 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
             ],
           ),
         ),
+        const SizedBox(width: 10),
       ],
     );
   }
@@ -451,15 +507,37 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
+          // Shuffle
+          StreamBuilder<bool>(
+            stream: _audioPlayer.shuffleModeEnabledStream,
+            builder: (context, snapshot) {
+              final isShuffled = snapshot.data ?? false;
+              return IconButton(
+                icon: Icon(
+                  Icons.shuffle,
+                  color: isShuffled
+                      ? Colors.deepPurpleAccent
+                      : Colors.white70,
+                ),
+                onPressed: () {
+                  _audioPlayer.setShuffleMode(
+                    isShuffled 
+                      ? AudioServiceShuffleMode.none 
+                      : AudioServiceShuffleMode.all
+                  );
+                },
+              );
+            },
+          ),
+
+          //prev
           IconButton(
             icon: const Icon(Icons.skip_previous, size: 28),
             color: Colors.white,
-            onPressed: () {
-              if (_audioPlayer.hasPrevious) {
-                _audioPlayer.skipToPrevious();
-              }
-            },
+            onPressed: _audioPlayer.hasPrevious ? () => _audioPlayer.skipToPrevious() : null,
           ),
+
+          //play pause
           StreamBuilder<bool>(
             stream: isPlaying,
             builder: (context, snapshot) {
@@ -494,13 +572,37 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
               );
             },
           ),
+
+          // Next
           IconButton(
             icon: const Icon(Icons.skip_next, size: 28),
             color: Colors.white,
-            onPressed: () {
-              if (_audioPlayer.hasNext) {
-                _audioPlayer.skipToNext();
-              }
+            onPressed: _audioPlayer.hasNext ? () => _audioPlayer.skipToNext() : null,
+          ),
+
+          // Repeat
+          StreamBuilder<AudioServiceRepeatMode>(
+            stream: _audioPlayer.repeatModeStream,
+            builder: (context, snapshot) {
+              final repeatMode = snapshot.data ?? AudioServiceRepeatMode.none;
+              return IconButton(
+                icon: Icon(
+                  repeatMode == AudioServiceRepeatMode.one
+                      ? Icons.repeat_one
+                      : Icons.repeat,
+                  color: repeatMode != AudioServiceRepeatMode.none
+                      ? Colors.deepPurpleAccent
+                      : Colors.white70,
+                ),
+                onPressed: () {
+                  final nextMode = repeatMode == AudioServiceRepeatMode.none
+                      ? AudioServiceRepeatMode.all
+                      : repeatMode == AudioServiceRepeatMode.all
+                          ? AudioServiceRepeatMode.one
+                          : AudioServiceRepeatMode.none;
+                  _audioPlayer.setRepeatMode(nextMode);
+                },
+              );
             },
           ),
         ],
@@ -616,43 +718,57 @@ class MusicSearchDelegate extends SearchDelegate {
         (song.artist?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
         (song.album?.toLowerCase().contains(query.toLowerCase()) ?? false)).toList();
 
-    return ListView.builder(
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        final song = results[index];
-        return ListTile(
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
-            child: QueryArtworkWidget(
-              id: song.id,
-              type: ArtworkType.AUDIO,
-              nullArtworkWidget: Container(
-                width: 50,
-                height: 50,
-                color: Colors.grey[800],
-                child: const Icon(Icons.music_note, color: Colors.white70),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [
+          Colors.deepPurpleAccent.withValues(alpha: .1),
+          Colors.purpleAccent.withValues(alpha: .1),
+        ])
+      ),
+      child: ListView.builder(
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          final song = results[index];
+          return ListTile(
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: QueryArtworkWidget(
+                id: song.id,
+                type: ArtworkType.AUDIO,
+                artworkBorder: BorderRadius.circular(8),
+                nullArtworkWidget: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      Colors.deepPurpleAccent.withValues(alpha: .35),
+                      Colors.purpleAccent.withValues(alpha: .35),
+                    ])
+                  ),
+                  child: const Icon(Icons.music_note, color: Colors.white70),
+                ),
+                artworkWidth: 50,
+                artworkHeight: 50,
               ),
-              artworkWidth: 50,
-              artworkHeight: 50,
             ),
-          ),
-          title: Text(
-            song.title,
-            style: const TextStyle(color: Colors.white),
-          ),
-          subtitle: Text(
-            '${song.artist ?? 'Unknown Artist'} • ${song.album ?? 'Unknown Album'}',
-            style: TextStyle(color: Colors.grey[400]),
-          ),
-          onTap: () {
-            final originalIndex = songs.indexWhere((s) => s.id == song.id);
-            if (originalIndex != -1) {
-              onSongSelected(originalIndex);
-              close(context, null);
-            }
-          },
-        );
-      },
+            title: Text(
+              song.title,
+              style: const TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              '${song.artist ?? 'Unknown Artist'} • ${song.album ?? 'Unknown Album'}',
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+            onTap: () {
+              final originalIndex = songs.indexWhere((s) => s.id == song.id);
+              if (originalIndex != -1) {
+                onSongSelected(originalIndex);
+                close(context, null);
+              }
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -661,7 +777,7 @@ class MusicSearchDelegate extends SearchDelegate {
     return ThemeData(
       scaffoldBackgroundColor: Colors.grey[900],
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: Colors.deepPurpleAccent.withValues(alpha: .1),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       inputDecorationTheme: InputDecorationTheme(
