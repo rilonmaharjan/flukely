@@ -11,7 +11,6 @@ Future<void> main() async {
 
   await _requestPermissions();
 
-  // Check if already initialized
   _audioHandler ??= await AudioService.init(
     builder: () => MyAudioHandler(),
     config: const AudioServiceConfig(

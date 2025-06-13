@@ -26,6 +26,10 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
   final _searchController = TextEditingController();
   final String _searchQuery = '';
   bool? isSplashScreen;
+  //timer
+  Timer? _sleepTimer;
+  Duration _remainingTime = Duration.zero;
+  bool _isTimerActive = false;
 
   @override
   void initState() {
@@ -126,8 +130,43 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
         (song.album?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)).toList();
   }
 
+  void _startSleepTimer(Duration duration) {
+    _cancelSleepTimer();
+    setState(() {
+      _remainingTime = duration;
+      _isTimerActive = true;
+    });
+    
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // Only update state when needed (last 10 seconds or minute changes)
+      if (_remainingTime.inSeconds % 60 == 0 || _remainingTime.inSeconds <= 10) {
+        if (mounted) {
+          setState(() {
+            _remainingTime -= const Duration(seconds: 1);
+          });
+        }
+      } else {
+        _remainingTime -= const Duration(seconds: 1);
+      }
+      
+      if (_remainingTime.inSeconds <= 0) {
+        _cancelSleepTimer();
+        _audioPlayer.pause();
+      }
+    });
+  }
+
+  void _cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    setState(() {
+      _isTimerActive = false;
+      _remainingTime = Duration.zero;
+    });
+  }
+
   @override
   void dispose() {
+    _sleepTimer?.cancel();
     _audioPlayer.dispose();
     _searchController.dispose();
     _animationController.dispose();
@@ -178,16 +217,33 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
             color: Colors.grey[200]
           )),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.white),
-              onPressed: () {
-                showSearch(
-                  context: context,
-                  delegate: MusicSearchDelegate(_songs, _playSong),
-                );
-              },
+            // Timer display and controls
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  onPressed: () {
+                    showSearch(
+                      context: context,
+                      delegate: MusicSearchDelegate(_songs, _playSong),
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+                TimerDisplay(
+                  remainingTime: _remainingTime,
+                  isActive: _isTimerActive,
+                  onPressed: () {
+                    if (_isTimerActive) {
+                      _cancelSleepTimer();
+                    } else {
+                      _showTimerDialog();
+                    }
+                  },
+                ),
+                const SizedBox(width: 10)
+              ],
             ),
-            SizedBox(width: 10,)
           ],
         ),
         body: Container(
@@ -294,23 +350,25 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: QueryArtworkWidget(
-                      id: song.id,
-                      type: ArtworkType.AUDIO,
-                      artworkBorder: BorderRadius.circular(8),
-                      nullArtworkWidget: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [
-                            Colors.deepPurpleAccent.withValues(alpha: .35),
-                            Colors.purpleAccent.withValues(alpha: .35),
-                          ])
+                    child: RepaintBoundary(
+                      child: QueryArtworkWidget(
+                        id: song.id,
+                        type: ArtworkType.AUDIO,
+                        artworkBorder: BorderRadius.circular(8),
+                        nullArtworkWidget: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [
+                              Colors.deepPurpleAccent.withValues(alpha: .35),
+                              Colors.purpleAccent.withValues(alpha: .35),
+                            ])
+                          ),
+                          child: const Icon(Icons.music_note, color: Colors.white70),
                         ),
-                        child: const Icon(Icons.music_note, color: Colors.white70),
+                        artworkWidth: 60,
+                        artworkHeight: 60,
                       ),
-                      artworkWidth: 60,
-                      artworkHeight: 60,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -672,6 +730,41 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
       debugPrint("Error playing song: $e");
     }
   }
+  
+  void _showTimerDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        title: const Text('Set Sleep Timer', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTimerOption('5 minutes', const Duration(minutes: 5)),
+            _buildTimerOption('15 minutes', const Duration(minutes: 15)),
+            _buildTimerOption('30 minutes', const Duration(minutes: 30)),
+            _buildTimerOption('1 hour', const Duration(hours: 1)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: const Text('Cancel', style: TextStyle(color: Colors.deepPurpleAccent)),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ListTile _buildTimerOption(String text, Duration duration) {
+    return ListTile(
+      title: Text(text, style: const TextStyle(color: Colors.white)),
+      onTap: () {
+        Navigator.pop(context);
+        _startSleepTimer(duration);
+      },
+    );
+  }
 }
 
 class MusicSearchDelegate extends SearchDelegate {
@@ -787,6 +880,44 @@ class MusicSearchDelegate extends SearchDelegate {
       textTheme: const TextTheme(
         titleLarge: TextStyle(color: Colors.white),
       ),
+    );
+  }
+}
+
+class TimerDisplay extends StatefulWidget {
+  final Duration remainingTime;
+  final bool isActive;
+  final VoidCallback onPressed;
+  
+  const TimerDisplay({
+    super.key,
+    required this.remainingTime,
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  @override
+  State<TimerDisplay> createState() => _TimerDisplayState();
+}
+
+class _TimerDisplayState extends State<TimerDisplay> {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (widget.isActive)
+          Text(
+            '${widget.remainingTime.inMinutes}:${(widget.remainingTime.inSeconds % 60).toString().padLeft(2, '0')}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        IconButton(
+          icon: Icon(
+            widget.isActive ? Icons.timer_off : Icons.timer,
+            color: Colors.white,
+          ),
+          onPressed: widget.onPressed,
+        ),
+      ],
     );
   }
 }
