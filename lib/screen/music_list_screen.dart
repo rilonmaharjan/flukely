@@ -732,37 +732,110 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
   }
   
   void _showTimerDialog() {
+    Duration selectedDuration = const Duration(minutes: 15); // Default value
+    final TextEditingController controller = TextEditingController(text: "15");
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[850],
-        title: const Text('Set Sleep Timer', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildTimerOption('5 minutes', const Duration(minutes: 5)),
-            _buildTimerOption('15 minutes', const Duration(minutes: 15)),
-            _buildTimerOption('30 minutes', const Duration(minutes: 30)),
-            _buildTimerOption('1 hour', const Duration(hours: 1)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel', style: TextStyle(color: Colors.deepPurpleAccent)),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[850],
+              title: const Text('Set Sleep Timer', 
+                  style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Quick Presets
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildChip('5 min', const Duration(minutes: 5)), 
+                      _buildChip('15 min', const Duration(minutes: 15)),
+                      _buildChip('30 min', const Duration(minutes: 30)),
+                      _buildChip('1 hour', const Duration(hours: 1)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Custom Time Picker
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          min: 1,
+                          max: 120,
+                          divisions: 119,
+                          value: selectedDuration.inMinutes.toDouble(),
+                          label: "${selectedDuration.inMinutes} min",
+                          onChanged: (value) {
+                            setState(() {
+                              selectedDuration = Duration(minutes: value.toInt());
+                              controller.text = value.toInt().toString();
+                            });
+                          },
+                          activeColor: Colors.deepPurpleAccent,
+                          inactiveColor: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Manual Input
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Minutes',
+                      labelStyle: TextStyle(color: Colors.grey[400]),
+                      border: OutlineInputBorder(),
+                      suffixText: 'min',
+                      suffixStyle: TextStyle(color: Colors.white),
+                    ),
+                    style: TextStyle(color: Colors.white),
+                    onChanged: (value) {
+                      final minutes = int.tryParse(value) ?? 15;
+                      setState(() {
+                        selectedDuration = Duration(minutes: minutes.clamp(1, 120));
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel', 
+                      style: TextStyle(color: Colors.deepPurpleAccent)),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                TextButton(
+                  child: const Text('Set Timer', 
+                      style: TextStyle(color: Colors.deepPurpleAccent)),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _startSleepTimer(selectedDuration);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  ListTile _buildTimerOption(String text, Duration duration) {
-    return ListTile(
-      title: Text(text, style: const TextStyle(color: Colors.white)),
-      onTap: () {
+  Widget _buildChip(String label, Duration duration) {
+    return ChoiceChip(
+      label: Text(label, style: TextStyle(color: Colors.white)),
+      selected: false,
+      onSelected: (_) {
         Navigator.pop(context);
         _startSleepTimer(duration);
       },
+      selectedColor: Colors.deepPurpleAccent,
+      backgroundColor: Colors.grey[800],
+      labelPadding: EdgeInsets.symmetric(horizontal: 12),
     );
   }
 }
