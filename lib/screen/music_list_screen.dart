@@ -978,11 +978,11 @@ class _TimerDisplayState extends State<TimerDisplay> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        if (widget.isActive)
-          Text(
-            '${widget.remainingTime.inMinutes}:${(widget.remainingTime.inSeconds % 60).toString().padLeft(2, '0')}',
-            style: const TextStyle(color: Colors.white),
-          ),
+        // if (widget.isActive)
+        //   Text(
+        //     '${widget.remainingTime.inMinutes}:${(widget.remainingTime.inSeconds % 60).toString().padLeft(2, '0')}',
+        //     style: const TextStyle(color: Colors.white),
+        //   ),
         IconButton(
           icon: Icon(
             widget.isActive ? Icons.timer_off : Icons.timer,
