@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:audio_service/audio_service.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flukely/screen/music_full_screen.dart';
 import 'package:flukely/services/my_audio_handler.dart';
 import 'package:flutter/material.dart';
@@ -51,23 +53,40 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
     });
   }
 
+
   Future<void> _checkAndRequestPermissions() async {
     try {
-      final storageStatus = await Permission.storage.request();
-      final manageStatus = await Permission.manageExternalStorage.request();
+      if (!Platform.isAndroid) return;
 
-      final allGranted = storageStatus.isGranted &&
-          manageStatus.isGranted;
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = deviceInfo.version.sdkInt;
 
-      if (!allGranted) {
-        setState(() => _hasPermission = false);
-        return;
+      bool granted = false;
+
+      if (sdkInt >= 33) {
+        // Android 13+
+        final audioStatus = await Permission.audio.request();
+        granted = audioStatus.isGranted;
+      } else if (sdkInt >= 30) {
+        // Android 11-12
+        final storageStatus = await Permission.storage.request();
+        final manageStatus = await Permission.manageExternalStorage.request();
+        granted = storageStatus.isGranted && manageStatus.isGranted;
+      } else {
+        // Android 10 and below
+        final storageStatus = await Permission.storage.request();
+        granted = storageStatus.isGranted;
       }
 
-      setState(() => _hasPermission = true);
-      await _loadSongs();
+      if (granted) {
+        setState(() => _hasPermission = true);
+        await _loadSongs();
+      } else {
+        setState(() => _hasPermission = false);
+      }
     } catch (e) {
       debugPrint("Permission error: $e");
+      setState(() => _hasPermission = false);
     }
   }
 
