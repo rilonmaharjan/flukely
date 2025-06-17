@@ -53,16 +53,15 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
 
   Future<void> _checkAndRequestPermissions() async {
     try {
-      if (await Permission.storage.isDenied) {
-        await Permission.storage.request();
-      }
+      final storageStatus = await Permission.storage.request();
+      final manageStatus = await Permission.manageExternalStorage.request();
 
-      if (await Permission.manageExternalStorage.isDenied) {
-        await Permission.manageExternalStorage.request();
-      }
+      final allGranted = storageStatus.isGranted &&
+          manageStatus.isGranted;
 
-      if (await Permission.audio.isDenied) {
-        await Permission.audio.request();
+      if (!allGranted) {
+        setState(() => _hasPermission = false);
+        return;
       }
 
       setState(() => _hasPermission = true);
@@ -285,7 +284,7 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              onPressed: _checkAndRequestPermissions,
+              onPressed: () => openAppSettings(),
               child: const Text('Grant Permission', 
                 style: TextStyle(color: Colors.white)),
             ),
