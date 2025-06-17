@@ -670,13 +670,16 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
 
   Widget _buildProgressBar() {
     return StreamBuilder<Duration>(
-      stream: positionStream,
+      stream: _audioPlayer.positionStream,
       builder: (context, positionSnapshot) {
         final position = positionSnapshot.data ?? Duration.zero;
+        debugPrint('Position: ${position.inSeconds}'); // Debug output
+
         return StreamBuilder<Duration?>(
-          stream: durationStream,
+          stream: _audioPlayer.durationStream,
           builder: (context, durationSnapshot) {
             final duration = durationSnapshot.data ?? Duration.zero;
+            debugPrint('Duration: ${duration.inSeconds}'); // Debug output
 
             String format(Duration d) {
               final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -696,24 +699,42 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
                     thumbColor: Colors.deepPurpleAccent,
                   ),
                   child: Slider(
-                    value: position.inMilliseconds.toDouble().clamp(0.0, duration.inMilliseconds.toDouble()),
+                    value: position.inMilliseconds.toDouble().clamp(
+                      0.0,
+                      duration.inMilliseconds.toDouble(),
+                    ),
                     min: 0,
                     max: duration.inMilliseconds.toDouble(),
+                    onChangeStart: (value) {
+                      // User started dragging
+                      debugPrint('Slider drag started');
+                    },
+                    onChangeEnd: (value) {
+                      // User stopped dragging
+                      debugPrint('Slider drag ended');
+                    },
                     onChanged: (value) {
+                      // Only update during drag if you want real-time feedback
                       _audioPlayer.seek(Duration(milliseconds: value.toInt()));
                     },
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12,0,12,5),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(format(position), style: TextStyle(color: Colors.grey[200], fontSize: 12)),
-                      Text(format(duration), style: TextStyle(color: Colors.grey[200], fontSize: 12)),
+                      Text(
+                        format(position),
+                        style: TextStyle(color: Colors.grey[200], fontSize: 12),
+                      ),
+                      Text(
+                        format(duration),
+                        style: TextStyle(color: Colors.grey[200], fontSize: 12),
+                      ),
                     ],
                   ),
-                )
+                ),
               ],
             );
           },

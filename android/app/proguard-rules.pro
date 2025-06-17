@@ -1,0 +1,4 @@
+-keep class com.google.android.exoplayer2.** { *; }
+-keep class com.google.common.** { *; }
+-keep class androidx.media.** { *; }
+-keep class android.support.v4.media.** { *; }
