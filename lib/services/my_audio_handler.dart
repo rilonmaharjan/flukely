@@ -10,10 +10,31 @@ class MyAudioHandler extends BaseAudioHandler {
   Stream<bool> get shuffleModeEnabledStream => _player.shuffleModeEnabledStream;
   Stream<AudioServiceRepeatMode> get repeatModeStream => 
       _player.loopModeStream.map(_convertLoopModeToRepeatMode);
+  Stream<String?> get currentMediaId => _player.currentIndexStream
+      .asyncMap((index) => _getMediaIdForIndex(index));
+  Stream<MediaItem?> get currentMediaItem => _player.currentIndexStream
+      .asyncMap((index) => _getMediaItemForIndex(index));
 
   MyAudioHandler() {
     _notifyAudioHandlerAboutPlaybackEvents();
     _listenToCurrentIndex();
+  }
+
+  // Helper methods to get media info
+  Future<String?> _getMediaIdForIndex(int? index) async {
+    if (index == null || _player.audioSource is! ConcatenatingAudioSource) return null;
+    final source = (_player.audioSource! as ConcatenatingAudioSource).children[index];
+    return (source is UriAudioSource && source.tag is MediaItem) 
+        ? (source.tag as MediaItem).id 
+        : null;
+  }
+
+  Future<MediaItem?> _getMediaItemForIndex(int? index) async {
+    if (index == null || _player.audioSource is! ConcatenatingAudioSource) return null;
+    final source = (_player.audioSource! as ConcatenatingAudioSource).children[index];
+    return (source is UriAudioSource && source.tag is MediaItem) 
+        ? source.tag as MediaItem 
+        : null;
   }
 
   void _notifyAudioHandlerAboutPlaybackEvents() {
@@ -23,14 +44,12 @@ class MyAudioHandler extends BaseAudioHandler {
           controls: [
             MediaControl.skipToPrevious,
             _player.playing ? MediaControl.pause : MediaControl.play,
-            MediaControl.fastForward,
             MediaControl.skipToNext,
           ],
           systemActions: const {
             MediaAction.seek,
             MediaAction.seekForward,
             MediaAction.seekBackward,
-            MediaAction.fastForward,
             MediaAction.pause,
             MediaAction.skipToNext,
             MediaAction.skipToPrevious,
@@ -77,7 +96,7 @@ class MyAudioHandler extends BaseAudioHandler {
       case AudioServiceRepeatMode.one:
         return LoopMode.one;
       case AudioServiceRepeatMode.group:
-        return LoopMode.all; // Default to all if group is not supported
+        return LoopMode.all;
     }
   }
 
@@ -111,7 +130,6 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> skipToPrevious() => _player.seekToPrevious();
 
-  // Fast forward 15 seconds
   @override
   Future<void> fastForward() async {
     final currentPosition = _player.position;
@@ -120,7 +138,6 @@ class MyAudioHandler extends BaseAudioHandler {
     await seek(newPosition > duration ? duration : newPosition);
   }
 
-  // Rewind 15 seconds
   @override
   Future<void> rewind() async {
     final currentPosition = _player.position;
@@ -128,7 +145,6 @@ class MyAudioHandler extends BaseAudioHandler {
     await seek(newPosition < Duration.zero ? Duration.zero : newPosition);
   }
 
-  // Updated shuffle and repeat methods to match BaseAudioHandler
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
     final enabled = shuffleMode == AudioServiceShuffleMode.all;
@@ -146,20 +162,47 @@ class MyAudioHandler extends BaseAudioHandler {
     ));
   }
 
+  // In MyAudioHandler class
+  Future<void> setAudioSources(List<AudioSource> sources, {int? initialIndex}) async {
+    await _player.setAudioSource(
+      ConcatenatingAudioSource(children: sources),
+      initialIndex: initialIndex,
+    );
+  }
+
   Future<void> seekToIndex(int index, [Duration? position]) =>
       _player.seek(position ?? Duration.zero, index: index);
 
-  Future<void> dispose() async => _player.dispose();
+  Future<void> setAudioSource(AudioSource source) =>
+      _player.setAudioSource(source);
 
-  // Streams and metadata
+  // Synchronous access to current media info
+  String? get currentMediaIdSync {
+    final index = _player.currentIndex;
+    if (index == null || _player.audioSource is! ConcatenatingAudioSource) return null;
+    final source = (_player.audioSource! as ConcatenatingAudioSource).children[index];
+    return (source is UriAudioSource && source.tag is MediaItem) 
+        ? (source.tag as MediaItem).id 
+        : null;
+  }
+
+  MediaItem? get currentMediaItemSync {
+    final index = _player.currentIndex;
+    if (index == null || _player.audioSource is! ConcatenatingAudioSource) return null;
+    final source = (_player.audioSource! as ConcatenatingAudioSource).children[index];
+    return (source is UriAudioSource && source.tag is MediaItem) 
+        ? source.tag as MediaItem 
+        : null;
+  }
+
+  // Player state getters
+  bool get hasNext => _player.hasNext;
+  bool get hasPrevious => _player.hasPrevious;
   Stream<int?> get currentIndexStream => _player.currentIndexStream;
   Stream<bool> get playingStream => _player.playingStream;
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
 
-  Future<void> setAudioSource(AudioSource source) =>
-      _player.setAudioSource(source);
-
-  bool get hasNext => _player.hasNext;
-  bool get hasPrevious => _player.hasPrevious;
+  
+  Future<void> dispose() async => _player.dispose();
 }
