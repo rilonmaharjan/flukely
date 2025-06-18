@@ -24,6 +24,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> with SingleTickerProv
   final OnAudioQuery _audioQuery = OnAudioQuery();
   late AnimationController _animationController;
   List<SongModel> _songs = [];
+  bool _isPlayerInitialized = false;
 
   @override
   void initState() {
@@ -32,6 +33,18 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> with SingleTickerProv
       duration: const Duration(seconds: 5),
       vsync: this,
     );
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    final myAudioHandler = widget.audioHandler as MyAudioHandler;
+    await myAudioHandler.setAudioSource(
+      // ignore: deprecated_member_use
+      ConcatenatingAudioSource(children: []), // Initialize with empty source
+    );
+    setState(() {
+      _isPlayerInitialized = true;
+    });
   }
 
   @override
@@ -50,21 +63,20 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> with SingleTickerProv
           tag: MediaItem(
             id: song.id.toString(),
             title: song.title,
-            artist: song.artist,
-            album: song.album,
+            artist: song.artist ?? 'Unknown Artist',
+            album: song.album ?? 'Unknown Album',
             artUri: Uri.file(song.data),
           ),
         );
       }).toList();
 
-      // Create concatenated source manually
-      await myAudioHandler.setAudioSource(
-        ConcatenatingAudioSource(children: audioSources),
+      await myAudioHandler.setAudioSources(
+        audioSources,
+        initialIndex: index,
       );
       
-      // Jump to the specific index
-      await myAudioHandler.seekToIndex(index);
       await myAudioHandler.play();
+      _animationController.repeat();
     } catch (e) {
       debugPrint("Error playing song: $e");
     }
@@ -72,6 +84,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    if (!_isPlayerInitialized) {
+      return Scaffold(
+        backgroundColor: Colors.grey[900],
+        body: Center(child: CircularProgressIndicator(color: Colors.deepPurpleAccent)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[900],
       appBar: AppBar(
@@ -289,103 +308,105 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> with SingleTickerProv
       stream: audioHandler.currentMediaItem,
       builder: (context, snapshot) {
         final mediaItem = snapshot.data;
-        if (mediaItem == null) return const SizedBox();
+        if (mediaItem == null) return const SizedBox(height: 0);
 
-        return Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.grey[900]!.withValues(alpha:0.8),
-                Colors.grey[800]!,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha:0.3),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) => 
-                    MusicFullScreen(audioHandler: widget.audioHandler),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    const begin = Offset(0.0, 1.0);
-                    const end = Offset.zero;
-                    const curve = Curves.easeInOut;
+        return StreamBuilder<bool>(
+          stream: audioHandler.playbackState.map((state) => state.playing).distinct(),
+          builder: (context, playingSnapshot) {
+            final isPlaying = playingSnapshot.data ?? false;
+            if (!isPlaying && mediaItem.id.isEmpty) return const SizedBox(height: 0);
 
-                    var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                    var offsetAnimation = animation.drive(tween);
-
-                    return SlideTransition(
-                      position: offsetAnimation,
-                      child: child,
-                    );
-                  },
-                  transitionDuration: const Duration(milliseconds: 300),
+            return Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.grey[900]!.withValues(alpha:0.8),
+                    Colors.grey[800]!,
+                  ],
                 ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildProgressBar(audioHandler),
-                  const SizedBox(height: 8),
-                  _buildSongInfo(mediaItem),
-                  _buildPlayerControls(audioHandler),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha:0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
                 ],
               ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => 
+                        MusicFullScreen(audioHandler: widget.audioHandler),
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        const begin = Offset(0.0, 1.0);
+                        const end = Offset.zero;
+                        const curve = Curves.easeInOut;
 
-  Widget _buildSongInfo(MediaItem mediaItem) {
-    return Row(
-      children: [
-        StreamBuilder<bool>(
-          stream: (widget.audioHandler as MyAudioHandler).playingStream,
-          builder: (context, snapshot) {
-            final isPlaying = snapshot.data ?? false;
-            return RotationTransition(
-              turns: isPlaying ? _animationController : const AlwaysStoppedAnimation(0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(100),
-                child: QueryArtworkWidget(
-                  id: int.parse(mediaItem.id),
-                  type: ArtworkType.AUDIO,
-                  artworkWidth: 50,
-                  artworkHeight: 50,
-                  nullArtworkWidget: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        Colors.deepPurpleAccent.withValues(alpha:.35),
-                        Colors.purpleAccent.withValues(alpha:.35),
-                      ])
+                        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                        var offsetAnimation = animation.drive(tween);
+
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child: child,
+                        );
+                      },
+                      transitionDuration: const Duration(milliseconds: 300),
                     ),
-                    child: const Icon(Icons.music_note, color: Colors.white70),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildProgressBar(audioHandler),
+                      const SizedBox(height: 8),
+                      _buildSongInfo(mediaItem, isPlaying),
+                      _buildPlayerControls(audioHandler),
+                    ],
                   ),
                 ),
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _buildSongInfo(MediaItem mediaItem, bool isPlaying) {
+    return Row(
+      children: [
+        RotationTransition(
+          turns: isPlaying ? _animationController : const AlwaysStoppedAnimation(0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: QueryArtworkWidget(
+              id: int.parse(mediaItem.id),
+              type: ArtworkType.AUDIO,
+              artworkWidth: 50,
+              artworkHeight: 50,
+              nullArtworkWidget: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    Colors.deepPurpleAccent.withValues(alpha:.35),
+                    Colors.purpleAccent.withValues(alpha:.35),
+                  ])
+                ),
+                child: const Icon(Icons.music_note, color: Colors.white70),
+              ),
+            ),
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(

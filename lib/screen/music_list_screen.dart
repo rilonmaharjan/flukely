@@ -32,7 +32,7 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
   Duration _remainingTime = Duration.zero;
   bool _isTimerActive = false;
 
-  int _currentIndex = 1;
+  int _currentIndex = 0;
   final List<Widget> _pages = [];
 
   @override
@@ -45,11 +45,8 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
     )..repeat();
     // Initialize pages
     _pages.addAll([
-      AlbumArtistsPage(audioHandler: widget.audioHandler), // We'll extract the songs list to a separate widget
-      SongsPage(audioHandler: widget.audioHandler), // We'll extract the songs list to a separate widget
-      AlbumArtistsPage(audioHandler: widget.audioHandler), // We'll extract the songs list to a separate widget
-      // ArtistsPage(audioHandler: widget.audioHandler),
-      // AlbumsPage(audioHandler: widget.audioHandler),
+      SongsPage(audioHandler: widget.audioHandler), 
+      AlbumArtistsPage(audioHandler: widget.audioHandler),
     ]);
     initialise();
   }
@@ -312,17 +309,17 @@ class _MusicListScreenState extends State<MusicListScreen> with SingleTickerProv
           iconSize: 28,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.album),
-              label: '',
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.music_note),
               label: '',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
+              icon: Icon(Icons.album),
               label: '',
             ),
+            // BottomNavigationBarItem(
+            //   icon: Icon(Icons.person),
+            //   label: '',
+            // ),
           ],
         ),
       ),
