@@ -30,6 +30,7 @@ class _SongsPageState extends State<SongsPage>  with SingleTickerProviderStateMi
   final _searchController = TextEditingController();
   final String _searchQuery = '';
   bool? isSplashScreen;
+  bool isLoading = false;
   //timer
   Timer? _sleepTimer;
 
@@ -55,6 +56,9 @@ class _SongsPageState extends State<SongsPage>  with SingleTickerProviderStateMi
 
   Future<void> _checkAndRequestPermissions() async {
     try {
+      setState(() {
+        isLoading = true;
+      });
       if (!Platform.isAndroid) return;
 
       final deviceInfo = await DeviceInfoPlugin().androidInfo;
@@ -86,6 +90,11 @@ class _SongsPageState extends State<SongsPage>  with SingleTickerProviderStateMi
     } catch (e) {
       debugPrint("Permission error: $e");
       setState(() => _hasPermission = false);
+    } 
+    finally{
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -166,13 +175,15 @@ class _SongsPageState extends State<SongsPage>  with SingleTickerProviderStateMi
           Colors.purpleAccent.withValues(alpha: .1),
         ])
       ),
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          _buildBody(),
-          _buildMiniPlayer(),
-        ],
-      ),
+      child: isLoading 
+        ? Center()
+        : Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            _buildBody(),
+            _buildMiniPlayer(),
+          ],
+        ),
     );
   }
 

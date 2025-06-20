@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flukely/screen/music_list_screen.dart';
+import 'package:flukely/screen/dashboard.dart';
 import 'package:flukely/services/my_audio_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
