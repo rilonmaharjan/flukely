@@ -74,6 +74,16 @@ class MyAudioHandler extends BaseAudioHandler {
         ),
       );
     });
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (_player.loopMode == LoopMode.one) {
+          _player.seek(Duration.zero);
+          _player.play();
+        } else {
+          skipToNext();
+        }
+      }
+    });
   }
 
   AudioServiceRepeatMode _convertLoopModeToRepeatMode(LoopMode loopMode) {
@@ -110,7 +120,7 @@ class MyAudioHandler extends BaseAudioHandler {
       }
     });
   }
-
+  
   // Playback controls
   @override
   Future<void> play() => _player.play();
